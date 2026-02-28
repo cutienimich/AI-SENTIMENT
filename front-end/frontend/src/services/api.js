@@ -1,0 +1,32 @@
+import axios from 'axios';
+
+const api = axios.create({
+   baseURL: 'http://192.168.1.7:8000',  // ← palitan ng actual IP mo
+
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
+
+// Auto-attach JWT token sa every request
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+// Auto-redirect to login if 401
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
+export default api;

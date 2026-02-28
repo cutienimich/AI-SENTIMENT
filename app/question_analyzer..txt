@@ -1,0 +1,7 @@
+from pydantic import BaseModel
+
+class QuestionPayload(BaseModel):
+    survey_id: int
+    question_text: str
+    emotion_tag: str | None = None
+    question_type: str = "open_ended"
