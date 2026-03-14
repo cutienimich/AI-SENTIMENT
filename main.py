@@ -13,6 +13,8 @@ from api.auth_api import router as auth_router
 from api.survey_api import router as survey_router
 from api.field_api import router as field_router
 
+from fastapi.middleware.cors import CORSMiddleware
+
 
 
 
@@ -26,7 +28,11 @@ app = FastAPI(title="AI Survey System")
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://salisense15.vercel.app"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
