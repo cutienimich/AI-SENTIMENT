@@ -68,11 +68,9 @@ export default function CreateSurvey() {
             <header className="header">
                 <div className="header-logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
                     <img src={viteLogo} alt="Logo" className="logo-img" />
-                    <span className="logo-text">EmotiSurvey</span>
+                    <span className="logo-text">SaliSense</span>
                 </div>
-                <button className="btn-back" onClick={() => navigate('/dashboard')}>
-                    ← Bumalik
-                </button>
+
             </header>
 
             {/* Main */}

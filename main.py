@@ -11,6 +11,8 @@ from api.response_api import router as response_router
 from api.analytics_api import router as analytics_router
 from api.auth_api import router as auth_router
 from api.survey_api import router as survey_router
+from api.field_api import router as field_router
+
 
 
 
@@ -37,3 +39,4 @@ app.include_router(response_router)
 app.include_router(analytics_router)
 app.include_router(auth_router)
 app.include_router(survey_router)
+app.include_router(field_router)

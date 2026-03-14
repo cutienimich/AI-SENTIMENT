@@ -80,7 +80,11 @@ export default function Register() {
                         />
                     </div>
                     <button type="submit" className="btn-primary" disabled={loading}>
-                        {loading ? 'Nagrerehistro...' : 'Mag-register'}
+                        {loading ? (
+                            'Nagrerehistro...'
+                        ) : (
+                            <img src="/Register.png" alt="Mag-register" className="btn-register-img" />
+                        )}
                     </button>
                 </form>
 

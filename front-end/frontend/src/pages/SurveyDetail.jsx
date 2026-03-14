@@ -4,7 +4,122 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import viteLogo from '/vite.svg';
 import './SurveyDetail.css';
+// Add sa imports sa taas ng file
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+// Color palettes
+const SENTIMENT_COLORS = {
+    positive: '#68d391',
+    negative: '#ff6b6b',
+    neutral: '#a0aec0'
+};
+const EMOTION_COLORS = {
+    joy: '#FFD700',
+    optimism: '#FFB300',
+    approval: '#68d391',
+    caring: '#f687b3',
+    admiration: '#9f7aea',
+    love: '#ff6b9d',
+    desire: '#ed8936',
+    excitement: '#fc8181',
+    amusement: '#63b3ed',
+    gratitude: '#4fd1c5',
+    pride: '#667eea',
+    relief: '#76e4f7',
+    surprise: '#f6e05e',
+    anger: '#e53e3e',
+    fear: '#553c9a',
+    sadness: '#4299e1',
+    disgust: '#276749',
+    disappointment: '#718096',
+    disapproval: '#c53030',
+    grief: '#2d3748',
+    remorse: '#744210',
+    embarrassment: '#feb2b2',
+    nervousness: '#faf089',
+    neutral: '#a0aec0',
+    realization: '#76e4f7',
+    confusion: '#d69e2e',
+    curiosity: '#48bb78',
+    annoyance: '#dd6b20',
+};
+
+const FALLBACK_COLORS = ['#FFB300','#FF6F00','#68d391','#ff6b6b','#a0aec0',
+    '#764ba2','#667eea','#ed8936','#48bb78','#63b3ed'];
+
+const EmotionPieChart = ({ data, colorMap }) => {
+    const chartData = Object.entries(data).map(([name, val]) => ({
+        name,
+        value: val.count,
+        percentage: val.percentage
+    }));
+
+    const getColor = (name, index) => {
+        if (colorMap && colorMap[name]) return colorMap[name];
+        if (EMOTION_COLORS[name]) return EMOTION_COLORS[name];
+        return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+    };
+
+    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percentage }) => {
+        const RADIAN = Math.PI / 180;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+        if (percentage < 8) return null;
+        return (
+            <text x={x} y={y} fill="white" textAnchor="middle"
+                dominantBaseline="central" fontSize={12}
+                fontFamily="Ubuntu" fontWeight="bold">
+                {`${percentage}%`}
+            </text>
+        );
+    };
+
+    return (
+        <ResponsiveContainer width="100%" height={300}>
+            <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="45%"
+                    outerRadius={90}
+                    dataKey="value"
+                    labelLine={false}
+                    label={renderCustomLabel}
+                >
+                    {chartData.map((entry, index) => (
+                        <Cell
+                            key={entry.name}
+                            fill={getColor(entry.name, index)}
+                        />
+                    ))}
+                </Pie>
+                <Tooltip
+                    formatter={(value, name) => [`${value} sagot`, name]}
+                    contentStyle={{
+                        backgroundColor: '#2a2a2a',
+                        border: '1px solid #FFB300',
+                        borderRadius: '8px',
+                        color: '#ccc',
+                        fontFamily: 'Ubuntu',
+                        fontSize: '0.85rem'
+                    }}
+                />
+                <Legend
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{ paddingTop: '12px', fontSize: '0.8rem' }}
+                    formatter={(value) => (
+                        <span style={{ color: '#ccc', fontSize: '0.8rem', fontFamily: 'Ubuntu' }}>
+                            {value}
+                        </span>
+                    )}
+                />
+            </PieChart>
+        </ResponsiveContainer>
+    );
+};
 export default function SurveyDetail() {
     const { surveyId } = useParams();
     const [activeTab, setActiveTab] = useState('overview');
@@ -12,6 +127,7 @@ export default function SurveyDetail() {
     const [questions, setQuestions] = useState([]);
     const [responses, setResponses] = useState([]);
     const [analytics, setAnalytics] = useState(null);
+    const [fields, setFields] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [copied, setCopied] = useState(false);
@@ -23,10 +139,40 @@ export default function SurveyDetail() {
     const [newQuestion, setNewQuestion] = useState({ question_text: '' });
     const [addingQuestion, setAddingQuestion] = useState(false);
 
+    const [newField, setNewField] = useState({ field_label: '', field_type: 'text', is_required: true });
+    const [addingField, setAddingField] = useState(false);
+
     const { user, logout } = useAuth();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
+    // Add sa state
+const [summaries, setSummaries] = useState({});
+const [loadingSummary, setLoadingSummary] = useState({});
+
+const generateSummary = async (questionId) => {
+    setLoadingSummary(prev => ({ ...prev, [questionId]: true }));
+    try {
+        const res = await api.get(`/analytics/${surveyId}/summary/${questionId}?regenerate=true`);
+        setSummaries(prev => ({ ...prev, [questionId]: res.data.summary }));
+    } catch (err) {
+        console.error('Failed to generate summary:', err);
+    } finally {
+        setLoadingSummary(prev => ({ ...prev, [questionId]: false }));
+    }
+};
+
+const fetchSummary = async (questionId) => {
+    setLoadingSummary(prev => ({ ...prev, [questionId]: true }));
+    try {
+        const res = await api.get(`/analytics/${surveyId}/summary/${questionId}`);
+        setSummaries(prev => ({ ...prev, [questionId]: res.data.summary }));
+    } catch (err) {
+        console.error('Failed to fetch summary:', err);
+    } finally {
+        setLoadingSummary(prev => ({ ...prev, [questionId]: false }));
+    }
+};
 
     useEffect(() => {
         fetchSurveyData();
@@ -45,25 +191,36 @@ export default function SurveyDetail() {
     useEffect(() => {
         if (activeTab === 'responses') fetchResponses();
         if (activeTab === 'analytics') fetchAnalytics();
+        if (activeTab === 'fields') fetchFields();
     }, [activeTab]);
 
-    const fetchSurveyData = async () => {
-        try {
-            const [surveyRes, questionsRes] = await Promise.all([
-                api.get(`/surveys`),
-                api.get(`/questions/${surveyId}`)
-            ]);
-            const found = surveyRes.data.find(s => s.survey_id === parseInt(surveyId));
-            setSurvey(found);
-            setEditTitle(found?.title || '');
-            setEditDescription(found?.description || '');
-            setQuestions(questionsRes.data.questions || []);
-        } catch (err) {
-            setError('Hindi ma-load ang survey.');
-        } finally {
-            setLoading(false);
+   // fetchSurveyData — add analytics fetch
+const fetchSurveyData = async () => {
+    try {
+        const [surveyRes, questionsRes, analyticsRes] = await Promise.all([
+            api.get(`/surveys`),
+            api.get(`/questions/${surveyId}`),
+            api.get(`/analytics/${surveyId}`)
+        ]);
+        const found = surveyRes.data.find(s => s.survey_id === parseInt(surveyId));
+        setSurvey(found);
+        setEditTitle(found?.title || '');
+        setEditDescription(found?.description || '');
+        setQuestions(questionsRes.data.questions || []);
+        setAnalytics(analyticsRes.data);
+
+        const existingSummaries = {};
+        for (const q of analyticsRes.data.per_question || []) {
+            if (q.ai_summary) existingSummaries[q.question_id] = q.ai_summary;
         }
-    };
+        setSummaries(existingSummaries);
+
+    } catch (err) {
+        setError('Hindi ma-load ang survey.');
+    } finally {
+        setLoading(false);
+    }
+};
 
     const fetchResponses = async () => {
         try {
@@ -74,12 +231,30 @@ export default function SurveyDetail() {
         }
     };
 
-    const fetchAnalytics = async () => {
+const fetchAnalytics = async () => {
+    try {
+        const res = await api.get(`/analytics/${surveyId}`);
+        setAnalytics(res.data);
+
+        // Load existing summaries
+        const existingSummaries = {};
+        for (const q of res.data.per_question || []) {
+            if (q.ai_summary) {
+                existingSummaries[q.question_id] = q.ai_summary;
+            }
+        }
+        setSummaries(existingSummaries);
+    } catch (err) {
+        console.error('Failed to fetch analytics:', err);
+    }
+};
+
+    const fetchFields = async () => {
         try {
-            const res = await api.get(`/analytics/${surveyId}`);
-            setAnalytics(res.data);
+            const res = await api.get(`/survey-fields/${surveyId}`);
+            setFields(res.data.fields || []);
         } catch (err) {
-            console.error('Failed to fetch analytics:', err);
+            console.error('Failed to fetch fields:', err);
         }
     };
 
@@ -143,6 +318,40 @@ export default function SurveyDetail() {
         }
     };
 
+    const handleAddField = async () => {
+        if (!newField.field_label.trim()) return;
+        setAddingField(true);
+        try {
+            const res = await api.post('/survey-fields', {
+                survey_id: parseInt(surveyId),
+                field_label: newField.field_label,
+                field_type: newField.field_type,
+                is_required: newField.is_required
+            });
+            setFields([...fields, {
+                field_id: res.data.field_id,
+                field_label: newField.field_label,
+                field_type: newField.field_type,
+                is_required: newField.is_required
+            }]);
+            setNewField({ field_label: '', field_type: 'text', is_required: true });
+        } catch (err) {
+            console.error('Failed to add field:', err);
+        } finally {
+            setAddingField(false);
+        }
+    };
+
+    const handleDeleteField = async (fieldId) => {
+        if (!window.confirm('Sigurado ka bang gusto mong burahin ang field na ito?')) return;
+        try {
+            await api.delete(`/survey-fields/${fieldId}`);
+            setFields(fields.filter(f => f.field_id !== fieldId));
+        } catch (err) {
+            console.error('Failed to delete field:', err);
+        }
+    };
+
     const handleTabChange = (tab) => {
         if (editMode) setEditMode(false);
         setActiveTab(tab);
@@ -153,7 +362,35 @@ export default function SurveyDetail() {
         navigate('/login');
     };
 
-    if (loading) return <div className="loading-screen">Naglo-load...</div>;
+  if (loading) {
+    return (
+        <div className="survey-detail">
+            <header className="header">
+                <div className="header-logo" style={{ cursor: 'pointer' }}>
+                    <img src={viteLogo} alt="Logo" className="logo-img" />
+                    <span className="logo-text">SaliSense</span>
+                </div>
+            </header>
+            <main className="main">
+                <div className="skeleton-card">
+                    <div className="skeleton skeleton-title" />
+                    <div className="skeleton skeleton-text" />
+                </div>
+                <div className="skeleton-tabs">
+                    {[1,2,3,4,5].map(i => (
+                        <div key={i} className="skeleton skeleton-tab" />
+                    ))}
+                </div>
+                {[1,2,3].map(i => (
+                    <div key={i} className="skeleton-card">
+                        <div className="skeleton skeleton-label" />
+                        <div className="skeleton skeleton-textarea" />
+                    </div>
+                ))}
+            </main>
+        </div>
+    );
+}
     if (error) return <div className="error-screen">{error}</div>;
 
     return (
@@ -163,7 +400,7 @@ export default function SurveyDetail() {
             <header className="header">
                 <div className="header-logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
                     <img src={viteLogo} alt="Logo" className="logo-img" />
-                    <span className="logo-text">EmotiSurvey</span>
+                    <span className="logo-text">SaliSense</span>
                 </div>
                 <div className="header-profile" ref={dropdownRef}>
                     <button className="profile-btn" onClick={() => setDropdownOpen(!dropdownOpen)}>
@@ -180,7 +417,6 @@ export default function SurveyDetail() {
             </header>
 
             <main className="main">
-
                 <div className="page-top">
                     <button className="btn-back" onClick={() => navigate('/dashboard')}>← Bumalik</button>
                     <div className="survey-title-area">
@@ -218,10 +454,10 @@ export default function SurveyDetail() {
                             {survey?.is_active ? 'I-deactivate' : 'I-activate'}
                         </button>
                         <button className="btn-copy" onClick={handleCopyLink}>
-                            {copied ? '✓ Nakopya!' : '🔗 Kopyahin ang Link'}
+                            {copied ? '✓ Nakopya!' : ' Kopyahin ang Link'}
                         </button>
                         {!editMode && (
-                            <button className="btn-edit" onClick={() => setEditMode(true)}>✏️ I-edit</button>
+                            <button className="btn-edit" onClick={() => setEditMode(true)}> I-edit</button>
                         )}
                         <button
                             className="btn-delete-survey"
@@ -235,20 +471,21 @@ export default function SurveyDetail() {
                                 }
                             }}
                         >
-                            🗑️ Burahin
+                             Burahin
                         </button>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="tabs">
-                    {['overview', 'questions', 'responses', 'analytics'].map(tab => (
+                    {['overview', 'fields', 'questions', 'responses', 'analytics'].map(tab => (
                         <button
                             key={tab}
                             className={`tab ${activeTab === tab ? 'active' : ''}`}
                             onClick={() => handleTabChange(tab)}
                         >
                             {tab === 'overview' && 'Overview'}
+                            {tab === 'fields' && 'Mga Field'}
                             {tab === 'questions' && 'Mga Tanong'}
                             {tab === 'responses' && 'Mga Sagot'}
                             {tab === 'analytics' && 'Analytics'}
@@ -266,9 +503,10 @@ export default function SurveyDetail() {
                                     <span className="card-label">Kabuuang Tanong</span>
                                     <span className="card-value">{questions.length}</span>
                                 </div>
+                                
                                 <div className="overview-card">
-                                    <span className="card-label">Kabuuang Sagot</span>
-                                    <span className="card-value">{analytics?.total_responses ?? '—'}</span>
+                                    <span className="card-label">Bilang ng Sumagot</span>
+                                    <span className="card-value">{analytics?.total_respondents ?? '—'}</span>
                                 </div>
                                 <div className="overview-card">
                                     <span className="card-label">Status</span>
@@ -276,6 +514,82 @@ export default function SurveyDetail() {
                                         {survey?.is_active ? 'Aktibo' : 'Hindi Aktibo'}
                                     </span>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Fields Tab */}
+                    {activeTab === 'fields' && (
+                        <div className="questions-tab">
+                            <p className="fields-info">
+                                Dito nakalagay ang karagdagang impormasyon ng respondent.
+                                
+                            </p>
+
+                            {fields.length === 0 ? (
+                                <p className="empty-text">Wala pang mga field.</p>
+                            ) : (
+                                fields.map((f) => (
+                                    <div key={f.field_id} className="question-item">
+                                        <div className="question-item-info">
+                                            <div>
+                                                <p className="q-text">{f.field_label}</p>
+                                                <div className="field-badges">
+                                                    <span className="q-type">{f.field_type}</span>
+                                                    {f.is_required && (
+                                                        <span className="q-type required-badge">Kinakailangan</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            className="btn-delete"
+                                            onClick={() => handleDeleteField(f.field_id)}
+                                        >
+                                            <i className="fas fa-trash-alt"></i> Burahin
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+
+                            {/* Add Field Form */}
+                            <div className="add-question-form">
+                                <h3>Magdagdag ng Field</h3>
+                                <div className="form-group">
+                                    <input
+                                        type="text"
+                                        placeholder="Label ng field (e.g. Age, Year Level)"
+                                        value={newField.field_label}
+                                        onChange={(e) => setNewField({ ...newField, field_label: e.target.value })}
+                                        maxLength={100}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <select
+                                        value={newField.field_type}
+                                        onChange={(e) => setNewField({ ...newField, field_type: e.target.value })}
+                                    >
+                                        <option value="text">Text</option>
+
+                                    </select>
+                                </div>
+                                <div className="form-group checkbox-group">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={newField.is_required}
+                                            onChange={(e) => setNewField({ ...newField, is_required: e.target.checked })}
+                                        />
+                                        Kinakailangan
+                                    </label>
+                                </div>
+                                <button
+                                    className="btn-add"
+                                    onClick={handleAddField}
+                                    disabled={addingField}
+                                >
+                                    {addingField ? 'Nagdadagdag...' : '+ Idagdag'}
+                                </button>
                             </div>
                         </div>
                     )}
@@ -298,7 +612,7 @@ export default function SurveyDetail() {
                                             className="btn-delete"
                                             onClick={() => handleDeleteQuestion(q.question_id)}
                                         >
-                                            🗑️ Burahin
+                                             Burahin
                                         </button>
                                     </div>
                                 ))
@@ -367,80 +681,80 @@ export default function SurveyDetail() {
                     )}
 
                     {/* Analytics Tab */}
-                    {activeTab === 'analytics' && (
-                        <div className="analytics-tab">
-                            {!analytics ? (
-                                <p className="empty-text">Naglo-load ng analytics...</p>
-                            ) : analytics.total_responses === 0 ? (
-                                <p className="empty-text">Wala pang mga sagot para sa analytics.</p>
+{activeTab === 'analytics' && (
+    <div className="analytics-tab">
+        {!analytics ? (
+            <p className="empty-text">Naglo-load ng analytics...</p>
+        ) : analytics.total_responses === 0 ? (
+            <p className="empty-text">Wala pang mga sagot para sa analytics.</p>
+        ) : (
+            <>
+                {/* Overall Charts */}
+                <div className="charts-row">
+                    <div className="chart-box">
+                        <h3>Kabuuang Distribusyon ng Sentiment</h3>
+                        <EmotionPieChart
+                            data={analytics.sentiment_distribution}
+                            colorMap={SENTIMENT_COLORS}
+                        />
+                    </div>
+                    <div className="chart-box">
+                        <h3>Kabuuang Distribusyon ng Emosyon</h3>
+                        <EmotionPieChart
+                            data={analytics.emotion_distribution}
+                            colorMap={null}
+                        />
+                    </div>
+                </div>
+
+                {/* Per Question */}
+                <h3 className="per-question-title">Per Tanong</h3>
+                {analytics.per_question.map(q => (
+                    <div key={q.question_id} className="question-analytics">
+                        <p className="q-analytics-text">{q.question_text}</p>
+
+                        <div className="charts-row">
+                            <div className="chart-box">
+                                <p className="analytics-sub-title">Sentiment</p>
+                                <EmotionPieChart
+                                    data={q.sentiment_distribution}
+                                    colorMap={SENTIMENT_COLORS}
+                                />
+                            </div>
+                            <div className="chart-box">
+                                <p className="analytics-sub-title">Emosyon</p>
+                                <EmotionPieChart
+                                    data={q.emotion_distribution}
+                                    colorMap={null}
+                                />
+                            </div>
+                        </div>
+
+                        {/* AI Summary */}
+                        <div className="ai-summary-section">
+                            {!summaries[q.question_id] ? (
+                                <button
+                                    className="btn-generate-summary"
+                                    onClick={() => fetchSummary(q.question_id)}
+                                    disabled={loadingSummary[q.question_id]}
+                                >
+                                    {loadingSummary[q.question_id] ? '✨ Ginagawa ang summary...' : '✨ Gumawa ng AI Summary'}
+                                </button>
                             ) : (
-                                <>
-                                    <h3>Kabuuang Distribusyon ng Sentiment</h3>
-                                    <div className="emotion-grid">
-                                        {Object.entries(analytics.sentiment_distribution).map(([sentiment, data]) => (
-                                            <div key={sentiment} className={`emotion-card sentiment-${sentiment}`}>
-                                                <span className="emotion-name">{sentiment}</span>
-                                                <span className="emotion-percent">{data.percentage}%</span>
-                                                <div className="emotion-bar">
-                                                    <div className={`emotion-fill fill-${sentiment}`} style={{ width: `${data.percentage}%` }} />
-                                                </div>
-                                                <span className="emotion-count">{data.count} sagot</span>
-                                            </div>
-                                        ))}
+                                <div className="ai-summary-card">
+                                    <div className="ai-summary-header">
+                                        <span className="ai-badge">✨ AI Summary</span>
                                     </div>
-
-                                    <h3>Kabuuang Distribusyon ng Emosyon</h3>
-                                    <div className="emotion-grid">
-                                        {Object.entries(analytics.emotion_distribution).map(([emotion, data]) => (
-                                            <div key={emotion} className="emotion-card">
-                                                <span className="emotion-name">{emotion}</span>
-                                                <span className="emotion-percent">{data.percentage}%</span>
-                                                <div className="emotion-bar">
-                                                    <div className="emotion-fill" style={{ width: `${data.percentage}%` }} />
-                                                </div>
-                                                <span className="emotion-count">{data.count} sagot</span>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <h3 className="per-question-title">Per Tanong</h3>
-                                    {analytics.per_question.map(q => (
-                                        <div key={q.question_id} className="question-analytics">
-                                            <p className="q-analytics-text">{q.question_text}</p>
-
-                                            <p className="analytics-sub-title">Sentiment</p>
-                                            <div className="emotion-grid">
-                                                {Object.entries(q.sentiment_distribution).map(([sentiment, data]) => (
-                                                    <div key={sentiment} className={`emotion-card sentiment-${sentiment}`}>
-                                                        <span className="emotion-name">{sentiment}</span>
-                                                        <span className="emotion-percent">{data.percentage}%</span>
-                                                        <div className="emotion-bar">
-                                                            <div className={`emotion-fill fill-${sentiment}`} style={{ width: `${data.percentage}%` }} />
-                                                        </div>
-                                                        <span className="emotion-count">{data.count} sagot</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <p className="analytics-sub-title">Emosyon</p>
-                                            <div className="emotion-grid">
-                                                {Object.entries(q.emotion_distribution).map(([emotion, data]) => (
-                                                    <div key={emotion} className="emotion-card">
-                                                        <span className="emotion-name">{emotion}</span>
-                                                        <span className="emotion-percent">{data.percentage}%</span>
-                                                        <div className="emotion-bar">
-                                                            <div className="emotion-fill" style={{ width: `${data.percentage}%` }} />
-                                                        </div>
-                                                        <span className="emotion-count">{data.count} sagot</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </>
+                                    <p className="ai-summary-text">{summaries[q.question_id]}</p>
+                                </div>
                             )}
                         </div>
-                    )}
+                    </div>
+                ))}
+            </>
+        )}
+    </div>
+)}
                 </div>
             </main>
         </div>

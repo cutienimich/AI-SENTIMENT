@@ -1,7 +1,8 @@
 .create-survey {
     min-height: 100vh;
+    min-width:100vw;
     background-color: #f0f4ff;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Ubuntu', sans-serif;
 }
 
 .header {
@@ -30,22 +31,23 @@
 .logo-text {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #3b5bdb;
+    color: #FFB300;
 }
 
 .btn-back {
     background: none;
-    border: 1px solid #3b5bdb;
+    border: 1px solid #FFB300;
     color: #3b5bdb;
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .btn-back:hover {
-    background-color: #3b5bdb;
+    background-color: #303030;
     color: white;
 }
 
@@ -53,6 +55,8 @@
     max-width: 700px;
     margin: 0 auto;
     padding: 40px 20px;
+    
+    
 }
 
 .main h1 {
@@ -82,7 +86,7 @@
 
 .form-card h2 {
     font-size: 1.2rem;
-    color: #3b5bdb;
+    color: #303030;
     margin-bottom: 20px;
 }
 
@@ -114,6 +118,7 @@
     font-size: 1rem;
     font-family: 'Segoe UI', sans-serif;
     transition: border 0.2s;
+    box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -126,7 +131,7 @@
 /* Questions */
 .questions-section h2 {
     font-size: 1.2rem;
-    color: #3b5bdb;
+    color: #303030;
     margin-bottom: 16px;
 }
 
@@ -160,6 +165,7 @@
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .btn-remove:hover {
@@ -171,8 +177,8 @@
     width: 100%;
     padding: 12px;
     background: none;
-    border: 2px dashed #3b5bdb;
-    color: #3b5bdb;
+    border: 2px dashed #303030;
+    color: #303030;
     border-radius: 12px;
     font-size: 0.95rem;
     font-weight: 600;
@@ -194,6 +200,7 @@
 }
 
 .btn-cancel {
+    width: 100%;
     padding: 12px 24px;
     background: none;
     border: 1px solid #ccc;
@@ -211,7 +218,7 @@
 
 .btn-submit {
     padding: 12px 24px;
-    background-color: #3b5bdb;
+    background-color: #FF6F00;
     color: white;
     border: none;
     border-radius: 8px;
@@ -222,10 +229,120 @@
 }
 
 .btn-submit:hover {
-    background-color: #2f4ac0;
+    background-color: #f5dc5d;
 }
 
 .btn-submit:disabled {
     background-color: #a0aec0;
     cursor: not-allowed;
+}
+
+/* ============================================
+   RESPONSIVE — TABLET (max-width: 768px)
+   ============================================ */
+@media (max-width: 768px) {
+    .header {
+        padding: 0 16px;
+    }
+
+    .main {
+        padding: 24px 16px;
+    }
+
+    .main h1 {
+        font-size: 1.4rem;
+        margin-bottom: 20px;
+    }
+
+    .form-card {
+        padding: 20px;
+    }
+
+    .question-card {
+        padding: 20px;
+    }
+
+    .form-actions {
+        gap: 8px;
+    }
+
+    .btn-cancel, .btn-submit {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+/* ============================================
+   RESPONSIVE — MOBILE (max-width: 480px)
+   ============================================ */
+@media (max-width: 480px) {
+    .header {
+        padding: 0 12px;
+        height: 56px;
+    }
+
+    .logo-text {
+        font-size: 1rem;
+    }
+
+    .logo-img {
+        height: 26px;
+    }
+
+    .btn-back {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .main {
+        padding: 16px 12px;
+    }
+
+    .main h1 {
+        font-size: 1.2rem;
+        margin-bottom: 16px;
+    }
+
+    .form-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    .form-card h2 {
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+    }
+
+    .question-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        font-size: 0.95rem;
+        padding: 9px 12px;
+    }
+
+    .btn-add-question {
+        font-size: 0.9rem;
+        padding: 10px;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+
+    .btn-cancel, .btn-submit {
+        width: 100%;
+        text-align: center;
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    .questions-section h2 {
+        font-size: 1.1rem;
+    }
 }

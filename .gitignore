@@ -15,3 +15,8 @@ dist/
 *.bin
 *.safetensors
 models/
+
+
+.env
+node_modules/
+front-end/

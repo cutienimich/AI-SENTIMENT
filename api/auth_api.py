@@ -1,9 +1,31 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, EmailStr
 
-from services.auth_service import register_user, verify_user, login_user
+from services.auth_service import register_user, verify_user, login_user, request_password_reset, reset_password
+from pydantic import BaseModel
+
 
 router = APIRouter()
+
+class ForgotPasswordPayload(BaseModel):
+    email: str
+
+class ResetPasswordPayload(BaseModel):
+    token: str
+    new_password: str
+
+@router.post("/auth/forgot-password")
+async def forgot_password(payload: ForgotPasswordPayload):
+    result = request_password_reset(payload.email)
+    return result
+
+@router.post("/auth/reset-password")
+async def reset_password_endpoint(payload: ResetPasswordPayload):
+    result = reset_password(payload.token, payload.new_password)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
 
 
 class RegisterPayload(BaseModel):

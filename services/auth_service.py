@@ -1,6 +1,8 @@
 import os
 from datetime import datetime, timedelta, timezone
 from services.db_service import get_db_connection
+from utils.email import send_verification_email, send_reset_email
+
 
 from utils.security import (
     hash_password,
@@ -115,6 +117,68 @@ def login_user(email: str, password: str):
 
     except Exception as e:
         print(f"Login error: {e}")  # ← add this
+        raise e
+    finally:
+        cursor.close()
+        conn.close()
+def request_password_reset(email: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id FROM accounts WHERE email = %s", (email,))
+        account = cursor.fetchone()
+
+        # Always return success para hindi malaman kung may account o wala
+        if not account:
+            return {"message": "Kung may account ka, makakatanggap ka ng email."}
+
+        token = generate_verification_token()
+        token_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+
+        cursor.execute("""
+            UPDATE accounts SET verification_token = %s, token_expiry = %s
+            WHERE email = %s
+        """, (token, token_expiry, email))
+        conn.commit()
+
+        send_reset_email(email, token)
+
+        return {"message": "Kung may account ka, makakatanggap ka ng email."}
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def reset_password(token: str, new_password: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id, token_expiry FROM accounts
+            WHERE verification_token = %s
+        """, (token,))
+        account = cursor.fetchone()
+
+        if not account:
+            return {"error": "Invalid o expired na reset link."}
+
+        token_expiry = account[1]
+        if datetime.now(timezone.utc) > token_expiry.replace(tzinfo=timezone.utc):
+            return {"error": "Expired na ang reset link. Subukan muli."}
+
+        hashed = hash_password(new_password)
+        cursor.execute("""
+            UPDATE accounts SET password = %s, verification_token = NULL, token_expiry = NULL
+            WHERE id = %s
+        """, (hashed, account[0]))
+        conn.commit()
+
+        return {"message": "Na-reset na ang password. Maaari ka nang mag-login."}
+    except Exception as e:
+        conn.rollback()
         raise e
     finally:
         cursor.close()
